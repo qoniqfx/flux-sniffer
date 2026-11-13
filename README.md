@@ -48,6 +48,10 @@ Dans **Plus d'options** : copier l'URL après redirection, la commande `ffplay` 
 S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic en fait le flux principal.
 **Arrêter l'écoute** coupe la capture sur l'onglet (le badge de l'icône montre qu'elle est active).
 
+## Garder Flux Sniffer ouvert
+
+Le popup d'une extension se ferme dès qu'on clique sur la page (comportement de Chrome). Le bouton **Garder ouvert** dans le popup ouvre Flux Sniffer dans le panneau latéral du navigateur : il reste affiché, suit l'onglet actif et écoute automatiquement chaque page que tu ouvres. Si ton navigateur n'a pas de panneau latéral, une petite fenêtre flottante est ouverte à la place.
+
 ## Mises à jour
 En bas du popup : `v0.2.0 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
 L'extension ne se met pas à jour toute seule : télécharge la nouvelle release, remplace le contenu du dossier, puis clique le bouton de rechargement dans la page des extensions.
@@ -95,6 +99,7 @@ Un flux qui échoue reste affiché avec la raison en clair (403, 404, page HTML,
 |---|---|
 | `webRequest` | lire les en-têtes de réponse des onglets écoutés |
 | `host_permissions: <all_urls>` | la radio peut être sur n'importe quel domaine, et le test doit pouvoir contacter le serveur du flux |
+| `sidePanel` | Afficher le panneau latéral. |
 | `scripting` | scanner la page à l'ouverture du popup |
 | `declarativeNetRequest` | rejouer Referer / Origin pendant le test |
 | `storage` | garder les flux trouvés de l'onglet (en mémoire de session, effacés à la fermeture du navigateur) et le résultat de la vérification de version |

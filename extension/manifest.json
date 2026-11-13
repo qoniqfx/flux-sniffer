@@ -1,12 +1,23 @@
 {
   "manifest_version": 3,
   "name": "Flux Sniffer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Trouve et teste les flux audio (Icecast, Shoutcast, HLS) d'un site radio, sans passer par l'onglet Network.",
   "minimum_chrome_version": "110",
-  "permissions": ["webRequest", "storage", "scripting", "declarativeNetRequest"],
-  "host_permissions": ["<all_urls>"],
-  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": [
+    "webRequest",
+    "storage",
+    "scripting",
+    "declarativeNetRequest",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "action": {
     "default_title": "Flux Sniffer",
     "default_popup": "popup/popup.html",
@@ -22,5 +33,8 @@
     "32": "icons/32.png",
     "48": "icons/48.png",
     "128": "icons/128.png"
+  },
+  "side_panel": {
+    "default_path": "popup/panel.html"
   }
 }

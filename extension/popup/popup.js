@@ -9,6 +9,7 @@ const KIND_NAME = { ICECAST: 'Icecast', SHOUTCAST: 'Shoutcast', ICY: 'Icecast/Sh
 
 let tabId = null;
 let tabUrl = '';
+let winId = null;
 let state = { armed: false, items: [] };
 let selectedKey = null;
 let showFiles = false;
@@ -258,19 +259,69 @@ async function load() {
   render();
 }
 
-async function init() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+const PANEL = document.body.dataset.mode === 'panel';
+
+async function currentTab() {
+  if (!PANEL) return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+  const w = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => null);
+  return w ? (await chrome.tabs.query({ active: true, windowId: w.id }))[0] : null;
+}
+
+// Binds the UI to a tab. In the side panel this runs again each time the user switches tab or navigates.
+let bindSeq = 0;
+async function bind(tab) {
+  const seq = ++bindSeq;
+  if ((tab?.id ?? null) !== tabId) {
+    stopAudio();
+    selectedKey = null;
+    showFiles = false;
+  }
   tabId = tab?.id ?? null;
   tabUrl = tab?.url || '';
+  winId = tab?.windowId ?? null;
+  $('#host').textContent = '';
   if (tabId == null) return render();
   await load();
+  if (seq !== bindSeq) return;
+  if (/^https?:/.test(tabUrl) && !state.armed) await send({ type: 'arm', on: true });
+}
+
+async function refreshTab() {
+  const tab = await currentTab();
+  if (!tab || (tab.id === tabId && (tab.url || '') === tabUrl)) return;
+  await bind(tab);
+}
+
+async function pin() {
+  try {
+    await chrome.sidePanel.open({ windowId: winId });
+  } catch {
+    // No side panel (older or alternative Chromium build): fall back to a detached window.
+    await chrome.windows.create({ url: chrome.runtime.getURL('popup/panel.html'), type: 'popup', width: 400, height: 660 });
+  }
+  window.close();
+}
+
+async function init() {
+  await bind(await currentTab());
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'session' && changes[`tab:${tabId}`]) {
+    if (area === 'session' && tabId != null && changes[`tab:${tabId}`]) {
       state = changes[`tab:${tabId}`].newValue || { armed: false, items: [] };
       render();
     }
   });
+
+  if (PANEL) {
+    chrome.tabs.onActivated.addListener(refreshTab);
+    chrome.tabs.onUpdated.addListener((id, info) => {
+      if (id === tabId && (info.url || info.status === 'complete')) refreshTab();
+    });
+    chrome.windows.onFocusChanged.addListener(refreshTab);
+  } else {
+    $('#pin').hidden = false;
+    $('#pin').addEventListener('click', pin);
+  }
 
   $('#reload').addEventListener('click', () => chrome.tabs.reload(tabId, { bypassCache: true }));
   $('#clear').addEventListener('click', () => {
@@ -280,7 +331,7 @@ async function init() {
   $('#stop').addEventListener('click', async () => {
     stopAudio();
     await send({ type: 'arm', on: false });
-    window.close();
+    if (!PANEL) window.close();
   });
 
   // Version check (cached 6 h, never blocks the UI).
@@ -290,9 +341,6 @@ async function init() {
     upd = r;
     render();
   });
-
-  // Opening the popup = start listening. No separate "activate" step.
-  if (/^https?:/.test(tabUrl) && !state.armed) await send({ type: 'arm', on: true });
 }
 
 init();
