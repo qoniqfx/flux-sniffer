@@ -1,4 +1,4 @@
-import { copyValue, realUrl } from '../lib/format.js';
+import { bestUrl, copyValue, realUrl } from '../lib/format.js';
 import { checkUpdate } from '../lib/update.js';
 
 const $ = (s) => document.querySelector(s);
@@ -129,13 +129,14 @@ function heroCard(it) {
     h('div', {}, h('div', { class: 'title' }, name || host), name ? h('div', { class: 'sub' }, host) : null),
     st === 'ok' && t.title ? h('div', { class: 'np' }, h('small', {}, 'En ce moment'), t.title) : null,
     h('div', { class: 'q' }, tags.map((x, i) => h('span', { class: `tag ${i === 0 ? '' : 'mono'}` }, x))),
-    h('div', { class: 'url', title: 'Clic pour copier', onclick: () => copy(it.url, 'URL') }, it.url),
+    h('div', { class: 'url', title: 'Clic pour copier', onclick: () => copy(bestUrl(it), 'URL') }, bestUrl(it)),
+    it.cleanUrl ? h('div', { class: 'sub' }, 'URL nettoyée : paramètres de suivi retirés, flux retesté ✓') : null,
     st === 'ko' ? h('div', { class: 'why' }, explain(t)) : null,
     playError ? h('div', { class: 'why' }, playError) : null,
     h(
       'div',
       { class: 'row' },
-      h('button', { class: 'btn btn-white', type: 'button', onclick: () => copy(it.url, 'URL') }, 'Copier l’URL'),
+      h('button', { class: 'btn btn-white', type: 'button', onclick: () => copy(bestUrl(it), 'URL') }, 'Copier l’URL'),
       st === 'ko'
         ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => send({ type: 'test', key: it.key }) }, 'Retester')
         : h('button', { class: 'btn btn-secondary', type: 'button', onclick: () => togglePlay(it) }, playingKey === it.key ? 'Stop' : 'Écouter'),

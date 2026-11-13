@@ -1,3 +1,4 @@
+import { cleanCandidates, bestUrl } from '../extension/lib/format.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -219,4 +220,12 @@ test('checkUpdate: fresh cache avoids the network, stale cache is kept when offl
   const reset = await checkUpdate('0.1.4', { fetchFn: f, cache, now: 2000 });
   assert.equal(calls, 1);
   assert.equal(reset.outdated, false);
+});
+
+test('cleanCandidates strips tracking params, bare URL first', () => {
+  const c = cleanCandidates('https://s.example/live?origine=player&aw_0_req.userConsentV2=&aw_0_1st.station=&token=abc');
+  assert.equal(c[0], 'https://s.example/live');
+  assert.equal(c[1], 'https://s.example/live?token=abc');
+  assert.deepEqual(cleanCandidates('https://s.example/live'), []);
+  assert.equal(bestUrl({ url: 'a', cleanUrl: 'b' }), 'b');
 });

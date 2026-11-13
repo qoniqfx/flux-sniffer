@@ -3,6 +3,7 @@
 
 import { classifyResponse, kindFromUrl, labelFor, normalizeKey } from './lib/classify.js';
 import { probe } from './lib/probe.js';
+import { cleanCandidates } from './lib/format.js';
 
 const KEY = (id) => `tab:${id}`;
 const MAX_ITEMS = 60;
@@ -189,8 +190,19 @@ async function runTest(tabId, key) {
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   const ctx = await makeCtx(tab?.url || '');
   let res;
+  let cleanUrl = '';
   try {
     res = await probe(it.url, ctx.api);
+    // Direct stream with tracking params in its URL: look for a shorter URL that still works.
+    if (res.ok && res.kind === 'stream') {
+      for (const cand of cleanCandidates(it.url)) {
+        const r2 = await probe(cand, ctx.api);
+        if (r2.ok && r2.kind === 'stream') {
+          cleanUrl = cand;
+          break;
+        }
+      }
+    }
   } finally {
     await ctx.cleanup();
   }
@@ -198,6 +210,7 @@ async function runTest(tabId, key) {
     const cur = s.items.find((i) => i.key === key);
     if (!cur) return;
     cur.test = { ...res, state: res.ok ? 'ok' : 'ko', at: Date.now() };
+    cur.cleanUrl = cleanUrl;
     if (res.ok) {
       if (cur.source === 'page' && res.kind === 'stream' && res.live === false) cur.kind = 'file';
       if (cur.kind === 'stream' || cur.kind === 'file') {

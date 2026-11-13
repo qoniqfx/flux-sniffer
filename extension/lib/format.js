@@ -11,6 +11,30 @@ export function realUrl(item) {
   return r && r !== item.url ? r : '';
 }
 
+const TRACKING = /^(aw_|utm_|origine$|origin$|source$|fbclid$|gclid$|us_privacy$|gdpr|.*consent|listener|context$|ref$|referrer$|cb$|_$|ts$|rnd$)/i;
+
+/** Cleaner variants of a stream URL (tracking / consent / ad params removed), most minimal first. Callers must test them. */
+export function cleanCandidates(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return [];
+  }
+  if (!u.search) return [];
+  const out = [];
+  const bare = `${u.origin}${u.pathname}`;
+  out.push(bare);
+  const kept = new URL(url);
+  for (const k of [...kept.searchParams.keys()]) if (TRACKING.test(k)) kept.searchParams.delete(k);
+  const stripped = kept.toString().replace(/\?$/, '');
+  if (stripped !== bare && stripped !== url) out.push(stripped);
+  return out;
+}
+
+/** URL to hand to the user: the verified clean one when there is one, else the captured one. */
+export const bestUrl = (item) => item.cleanUrl || item.url;
+
 function recExt(item) {
   const c = (item.test?.codec || '').toLowerCase();
   if (/mp3|mp2/.test(c)) return 'mp3';
@@ -22,8 +46,8 @@ function recExt(item) {
 
 /** Text put in the clipboard for a given format: url | ffplay | ffmpeg. */
 export function copyValue(item, fmt) {
-  const target = item.test?.resolved || item.url;
+  const target = item.test?.resolved || bestUrl(item);
   if (fmt === 'ffplay') return `ffplay -nodisp "${target}"`;
   if (fmt === 'ffmpeg') return `ffmpeg -i "${target}" -c copy "rec.${recExt(item)}"`;
-  return item.url;
+  return bestUrl(item);
 }
