@@ -262,10 +262,20 @@ async function load() {
 
 const PANEL = document.body.dataset.mode === 'panel';
 
+const FULL = new URLSearchParams(location.search).has('full');
+
+const isWeb = (t) => t && /^https?:/.test(t.url || '');
+
 async function currentTab() {
   if (!PANEL) return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+  // Panel / full-page view: follow the active web page of the browser window,
+  // else the most recently used web page (the full-page view is itself the active tab).
   const w = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => null);
-  return w ? (await chrome.tabs.query({ active: true, windowId: w.id }))[0] : null;
+  const active = w ? (await chrome.tabs.query({ active: true, windowId: w.id }))[0] : null;
+  if (isWeb(active)) return active;
+  const web = (await chrome.tabs.query({ windowType: 'normal' })).filter(isWeb);
+  web.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  return web[0] || active || null;
 }
 
 // Binds the UI to a tab. In the side panel this runs again each time the user switches tab or navigates.
@@ -298,12 +308,18 @@ async function pin() {
     await chrome.sidePanel.open({ windowId: winId });
   } catch {
     // No side panel (older or alternative Chromium build): fall back to a detached window.
-    await chrome.windows.create({ url: chrome.runtime.getURL('popup/panel.html'), type: 'popup', width: 400, height: 660 });
+    await chrome.windows.create({ url: chrome.runtime.getURL('popup/panel.html'), type: 'popup', width: 460, height: 800 });
   }
   window.close();
 }
 
+function openFull() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('popup/panel.html?full=1') });
+  if (!PANEL) window.close();
+}
+
 async function init() {
+  if (FULL) document.body.classList.add('full');
   await bind(await currentTab());
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -322,6 +338,10 @@ async function init() {
   } else {
     $('#pin').hidden = false;
     $('#pin').addEventListener('click', pin);
+  }
+  if (!FULL) {
+    $('#full').hidden = false;
+    $('#full').addEventListener('click', openFull);
   }
 
   $('#reload').addEventListener('click', () => chrome.tabs.reload(tabId, { bypassCache: true }));

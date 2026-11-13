@@ -50,7 +50,7 @@ S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic e
 
 ## Garder Flux Sniffer ouvert
 
-Le popup d'une extension se ferme dès qu'on clique sur la page (comportement de Chrome). Le bouton **Garder ouvert** dans le popup ouvre Flux Sniffer dans le panneau latéral du navigateur : il reste affiché, suit l'onglet actif et écoute automatiquement chaque page que tu ouvres. Si ton navigateur n'a pas de panneau latéral, une petite fenêtre flottante est ouverte à la place.
+Le popup d'une extension se ferme dès qu'on clique sur la page (comportement de Chrome). Le bouton **Garder ouvert** dans le popup ouvre Flux Sniffer dans le panneau latéral du navigateur : il reste affiché, suit l'onglet actif et écoute automatiquement chaque page que tu ouvres. Si ton navigateur n'a pas de panneau latéral, une petite fenêtre flottante est ouverte à la place. Le bouton **Plein écran** ouvre Flux Sniffer dans un onglet entier ; il suit la dernière page web que tu as utilisée.
 
 ## Mises à jour
 En bas du popup : `v0.2.0 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
