@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Flux Sniffer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="logo"><span class="d"></span>Flux Sniffer</span>
+    <span id="host" class="host"></span>
+  </header>
+
+  <main id="view" aria-live="polite"></main>
+
+  <footer id="foot" hidden>
+    <button id="reload" class="link" type="button">Recharger la page</button>
+    <button id="clear" class="link" type="button">Effacer</button>
+    <button id="stop" class="link" type="button">Arrêter l’écoute</button>
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

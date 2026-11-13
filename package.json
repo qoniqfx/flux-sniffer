@@ -1,0 +1,10 @@
+{
+  "name": "qoniq-flux-sniffer",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "icons": "python3 scripts/make_icons.py"
+  }
+}
