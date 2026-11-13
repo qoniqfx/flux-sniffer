@@ -48,6 +48,10 @@ Dans **Plus d'options** : copier l'URL après redirection, la commande `ffplay` 
 S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic en fait le flux principal.
 **Arrêter l'écoute** coupe la capture sur l'onglet (le badge de l'icône montre qu'elle est active).
 
+## Mises à jour
+En bas du popup : `v0.1.3 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
+L'extension ne se met pas à jour toute seule : télécharge la nouvelle release, remplace le contenu du dossier, puis clique le bouton de rechargement dans la page des extensions.
+
 ## Comment ça marche
 
 ```
@@ -69,10 +73,10 @@ S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic e
         popup : URL + « ça marche » + infos
 ```
 
-**1. Capture.** Pendant que l'écoute est active, l'extension observe les réponses réseau de l'onglet (pas leur contenu, seulement les en-têtes). Elle ne garde que ce qui ressemble à un flux : `Content-Type` audio, en-têtes `icy-*`, absence de `Content-Length`, ou URL en `.m3u8` / `.pls` / `.m3u` / `.mpd`. Si le player passe par une redirection (Zeno, Radio.co…), elle garde l'URL de départ, plus stable, et mémorise l'URL finale.
+**1. Capture.** Pendant que l'écoute est active, l'extension observe les réponses réseau de l'onglet (pas leur contenu, seulement les en-têtes). Elle ne garde que ce qui ressemble à un flux : `Content-Type` audio, en-têtes `icy-*`, absence de `Content-Length`, ou URL en `.m3u8` / `.pls` / `.m3u` / `.mpd`. Si le player passe par une redirection, elle garde l'URL de départ, plus stable, et mémorise l'URL finale.
 En plus du réseau, elle scanne la page (balises `audio` / `video`, JSON, HTML) pour retrouver un flux déjà lancé avant l'ouverture du popup.
 
-**HLS (M6 Radio, Quortex, etc.)** : les segments `.ts` / `.m4s` changent toutes les quelques secondes, ils sont ignorés. Si le player n'a chargé que la playlist d'une qualité (`…/audio-64000/index.m3u8`), l'extension cherche la **playlist maître** un niveau au-dessus (`index.m3u8`, `master.m3u8`…) et te la propose en premier : c'est l'URL stable, avec toutes les qualités.
+**Webradios HLS** : les segments `.ts` / `.m4s` changent toutes les quelques secondes, ils sont ignorés. Si le player n'a chargé que la playlist d'une qualité (`…/audio-64000/index.m3u8`), l'extension cherche la **playlist maître** un niveau au-dessus (`index.m3u8`, `master.m3u8`…) et te la propose en premier : c'est l'URL stable, avec toutes les qualités.
 
 **2. Classement.** Un flux direct avec en-têtes `icy-*` est étiqueté Icecast ou Shoutcast d'après l'en-tête `Server`. Les playlists HLS, DASH, PLS et M3U ont leur propre étiquette. Les fichiers audio avec `Content-Length` (podcasts, jingles) sont masqués par défaut, ainsi que les segments HLS.
 
@@ -93,9 +97,10 @@ Un flux qui échoue reste affiché avec la raison en clair (403, 404, page HTML,
 | `host_permissions: <all_urls>` | la radio peut être sur n'importe quel domaine, et le test doit pouvoir contacter le serveur du flux |
 | `scripting` | scanner la page à l'ouverture du popup |
 | `declarativeNetRequest` | rejouer Referer / Origin pendant le test |
-| `storage` | garder les flux trouvés de l'onglet (en mémoire de session, effacés à la fermeture du navigateur) |
+| `storage` | garder les flux trouvés de l'onglet (en mémoire de session, effacés à la fermeture du navigateur) et le résultat de la vérification de version |
 
-Rien n'est envoyé nulle part : pas de serveur, pas de statistiques. Tout reste dans ton navigateur.
+Pas de serveur, pas de statistiques, rien n'est envoyé sur les flux que tu trouves. Tout reste dans ton navigateur.
+Seule requête sortante hors tests de flux : une vérification de version auprès de `api.github.com` (au plus une fois toutes les 6 h, à l'ouverture du popup) pour t'afficher si tu as la dernière version. GitHub voit donc ton adresse IP, comme pour n'importe quelle requête web.
 L'extension n'écoute que les onglets où tu as ouvert le popup, jusqu'à ce que tu l'arrêtes ou fermes l'onglet.
 
 ## Limites
@@ -109,7 +114,7 @@ L'extension n'écoute que les onglets où tu as ouvert le popup, jusqu'à ce que
 
 ```bash
 git clone <ce dépôt>
-npm test            # 11 tests : faux serveur Icecast, HLS, PLS, 404, page HTML, classement
+npm test            # 16 tests : faux serveur Icecast, HLS, PLS, 404, page HTML, classement
 npm run icons       # régénère les icônes (Python + Pillow)
 ```
 
@@ -122,6 +127,7 @@ extension/
   lib/classify.js      classement des réponses, clé de déduplication
   lib/probe.js         test des flux (ICY, MP3/AAC/Ogg, HLS, DASH, playlists)
   lib/format.js        formats de copie (URL, ffplay, ffmpeg)
+  lib/update.js        vérification de la dernière version (GitHub releases)
   popup/               interface
 tests/                 tests Node avec de faux serveurs
 ```

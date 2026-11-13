@@ -1,4 +1,5 @@
 import { copyValue, realUrl } from '../lib/format.js';
+import { checkUpdate } from '../lib/update.js';
 
 const $ = (s) => document.querySelector(s);
 const STALE_RUNNING_MS = 20000;
@@ -14,6 +15,8 @@ let showFiles = false;
 let audio = null;
 let playingKey = null;
 let playError = '';
+let upd = null; // result of the version check (null = unknown)
+const CURRENT = chrome.runtime.getManifest().version;
 
 // DOM builder: textContent only (URLs, ICY names and titles come from untrusted pages).
 function h(tag, attrs = {}, ...kids) {
@@ -172,7 +175,26 @@ function otherRow(it) {
   );
 }
 
+function updBanner() {
+  if (!upd?.outdated) return null;
+  return h(
+    'button',
+    { class: 'upd', type: 'button', onclick: () => chrome.tabs.create({ url: upd.url }) },
+    `Nouvelle version ${upd.latest} disponible`,
+    h('span', {}, 'Télécharger →'),
+  );
+}
+
+function renderVer() {
+  const el = $('#ver');
+  el.className = `ver ${$('#foot').hidden ? '' : 'sep'}`;
+  const dot = upd?.outdated ? 'warn' : upd && upd.latest ? 'ok' : '';
+  const txt = upd?.outdated ? `v${CURRENT} · version obsolète (dernière : ${upd.latest})` : upd && upd.latest ? `v${CURRENT} · à jour` : `v${CURRENT}`;
+  el.replaceChildren(h('span', { class: `dot ${dot}` }), txt);
+}
+
 function render() {
+  renderVer();
   const http = /^https?:/.test(tabUrl);
   try {
     $('#host').textContent = http ? new URL(tabUrl).host : '';
@@ -182,7 +204,7 @@ function render() {
 
   const view = $('#view');
   if (!http) {
-    view.replaceChildren(h('div', { class: 'state' }, h('h2', {}, 'Page non analysable'), h('p', {}, 'Ouvre le site d’une radio (http ou https) puis relance l’extension.')));
+    view.replaceChildren(updBanner(), h('div', { class: 'state' }, h('h2', {}, 'Page non analysable'), h('p', {}, 'Ouvre le site d’une radio (http ou https) puis relance l’extension.')));
     return;
   }
 
@@ -193,6 +215,7 @@ function render() {
 
   if (!live.length) {
     view.replaceChildren(
+      updBanner(),
       h(
         'div',
         { class: 'state' },
@@ -214,7 +237,7 @@ function render() {
 
   const main = live.find((i) => i.key === selectedKey) || live[0];
   const others = live.filter((i) => i !== main);
-  const nodes = [heroCard(main)];
+  const nodes = [updBanner(), heroCard(main)].filter(Boolean);
   if (others.length || files.length) {
     nodes.push(
       h(
@@ -258,6 +281,14 @@ async function init() {
     stopAudio();
     await send({ type: 'arm', on: false });
     window.close();
+  });
+
+  // Version check (cached 6 h, never blocks the UI).
+  chrome.storage.local.get('upd').then(async ({ upd: cache }) => {
+    const r = await checkUpdate(CURRENT, { cache });
+    if (r && r !== cache) chrome.storage.local.set({ upd: r });
+    upd = r;
+    render();
   });
 
   // Opening the popup = start listening. No separate "activate" step.

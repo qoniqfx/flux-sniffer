@@ -4,6 +4,7 @@ import http from 'node:http';
 import { probe } from '../extension/lib/probe.js';
 import { classifyResponse, normalizeKey, isSegment } from '../extension/lib/classify.js';
 import { copyValue } from '../extension/lib/format.js';
+import { isNewer, checkUpdate } from '../extension/lib/update.js';
 
 // MPEG1 Layer III, 128 kbps, 44.1 kHz, joint stereo -> 417-byte frames
 const frame = () => {
@@ -152,8 +153,8 @@ test('classifyResponse', () => {
   assert.equal(classifyResponse({ url: 'https://a.fr/live', status: 302, headers: { 'content-type': 'audio/mpeg' } }), null);
 });
 
-test('HLS segments are never streams (M6 / Quortex style)', () => {
-  const u = 'https://hls.m6radio.quortex.io/radio/webradio/fun-one-world-radio/short/audio-64000/segment_311557914.ts';
+test('HLS segments are never streams (typical CDN segment URLs)', () => {
+  const u = 'https://cdn.example.net/radio/webradio/live/short/audio-64000/segment_311557914.ts';
   assert.equal(classifyResponse({ url: u, status: 200, headers: { 'content-type': 'video/mp2t' } }), null);
   assert.equal(classifyResponse({ url: u, status: 200, headers: { 'content-type': 'audio/mpeg' } }), null);
   assert.equal(classifyResponse({ url: 'https://a.fr/x/chunk-00042.aac', status: 200, headers: { 'content-type': 'audio/aac' } }), null);
@@ -183,4 +184,39 @@ test('copy formats', () => {
   assert.equal(copyValue(it, 'url'), 'http://a.fr/live');
   assert.equal(copyValue(it, 'ffplay'), 'ffplay -nodisp "http://a.fr/live"');
   assert.equal(copyValue(it, 'ffmpeg'), 'ffmpeg -i "http://a.fr/live" -c copy "rec.mp3"');
+});
+
+test('isNewer compares semver', () => {
+  assert.equal(isNewer('v0.1.3', '0.1.2'), true);
+  assert.equal(isNewer('v0.2.0', '0.1.9'), true);
+  assert.equal(isNewer('v1.0.0', '0.9.9'), true);
+  assert.equal(isNewer('v0.1.2', '0.1.2'), false);
+  assert.equal(isNewer('v0.1.1', '0.1.2'), false);
+  assert.equal(isNewer('nope', '0.1.2'), false);
+});
+
+const rel = (tag, status = 200) => async () => ({ ok: status === 200, status, json: async () => ({ tag_name: tag, html_url: `https://github.com/qoniqfx/flux-sniffer/releases/tag/${tag}` }) });
+
+test('checkUpdate: outdated, up to date, no release, offline', async () => {
+  const a = await checkUpdate('0.1.2', { fetchFn: rel('v0.1.3') });
+  assert.equal(a.outdated, true);
+  assert.equal(a.latest, 'v0.1.3');
+  assert.match(a.url, /releases\/tag\/v0\.1\.3$/);
+  assert.equal((await checkUpdate('0.1.3', { fetchFn: rel('v0.1.3') })).outdated, false);
+  const none = await checkUpdate('0.1.3', { fetchFn: rel('', 404) });
+  assert.deepEqual([none.outdated, none.latest], [false, '']);
+  assert.equal(await checkUpdate('0.1.3', { fetchFn: async () => { throw new Error('offline'); } }), null);
+});
+
+test('checkUpdate: fresh cache avoids the network, stale cache is kept when offline', async () => {
+  const cache = { at: 1000, current: '0.1.2', latest: 'v0.1.3', url: 'u', outdated: true };
+  let calls = 0;
+  const f = async () => (calls++, { ok: true, status: 200, json: async () => ({ tag_name: 'v0.1.3', html_url: 'u' }) });
+  assert.equal(await checkUpdate('0.1.2', { fetchFn: f, cache, now: 2000 }), cache);
+  assert.equal(calls, 0);
+  const offline = await checkUpdate('0.1.2', { fetchFn: async () => { throw new Error('x'); }, cache, now: 1000 + 7 * 3600 * 1000 });
+  assert.equal(offline.outdated, true);
+  const reset = await checkUpdate('0.1.4', { fetchFn: f, cache, now: 2000 });
+  assert.equal(calls, 1);
+  assert.equal(reset.outdated, false);
 });

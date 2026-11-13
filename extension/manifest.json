@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Flux Sniffer",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Trouve et teste les flux audio (Icecast, Shoutcast, HLS) d'un site radio, sans passer par l'onglet Network.",
   "minimum_chrome_version": "110",
   "permissions": ["webRequest", "storage", "scripting", "declarativeNetRequest"],
