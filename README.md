@@ -49,7 +49,7 @@ S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic e
 **Arrêter l'écoute** coupe la capture sur l'onglet (le badge de l'icône montre qu'elle est active).
 
 ## Mises à jour
-En bas du popup : `v0.1.3 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
+En bas du popup : `v0.2.0 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
 L'extension ne se met pas à jour toute seule : télécharge la nouvelle release, remplace le contenu du dossier, puis clique le bouton de rechargement dans la page des extensions.
 
 ## Comment ça marche
