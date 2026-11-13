@@ -262,11 +262,15 @@ async function load() {
 
 const PANEL = document.body.dataset.mode === 'panel';
 
-const FULL = new URLSearchParams(location.search).has('full');
+const QS = new URLSearchParams(location.search);
+const FULL = QS.has('full');
+const OVERLAY = QS.has('overlay');
+const FIXED_TAB = Number(QS.get('tab')) || null;
 
 const isWeb = (t) => t && /^https?:/.test(t.url || '');
 
 async function currentTab() {
+  if (FIXED_TAB) return chrome.tabs.get(FIXED_TAB).catch(() => null);
   if (!PANEL) return (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
   // Panel / full-page view: follow the active web page of the browser window,
   // else the most recently used web page (the full-page view is itself the active tab).
@@ -304,12 +308,7 @@ async function refreshTab() {
 }
 
 async function pin() {
-  try {
-    await chrome.sidePanel.open({ windowId: winId });
-  } catch {
-    // No side panel (older or alternative Chromium build): fall back to a detached window.
-    await chrome.windows.create({ url: chrome.runtime.getURL('popup/panel.html'), type: 'popup', width: 460, height: 800 });
-  }
+  await send({ type: 'overlay', on: true });
   window.close();
 }
 
@@ -320,6 +319,7 @@ function openFull() {
 
 async function init() {
   if (FULL) document.body.classList.add('full');
+  if (OVERLAY) document.body.classList.add('ov');
   await bind(await currentTab());
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -339,7 +339,7 @@ async function init() {
     $('#pin').hidden = false;
     $('#pin').addEventListener('click', pin);
   }
-  if (!FULL) {
+  if (!FULL && !OVERLAY) {
     $('#full').hidden = false;
     $('#full').addEventListener('click', openFull);
   }

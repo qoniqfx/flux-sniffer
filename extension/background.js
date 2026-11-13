@@ -4,6 +4,7 @@
 import { classifyResponse, kindFromUrl, labelFor, normalizeKey } from './lib/classify.js';
 import { probe } from './lib/probe.js';
 import { cleanCandidates } from './lib/format.js';
+import { showOverlay, hideOverlay } from './lib/overlay.js';
 
 const KEY = (id) => `tab:${id}`;
 const MAX_ITEMS = 60;
@@ -322,11 +323,35 @@ async function setArmed(tabId, on) {
   if (on) await scanTab(tabId);
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, send) => {
+// Floating window inside the page. Remembered per tab so it comes back after a page reload.
+const OV = (id) => `ov:${id}`;
+async function setOverlay(tabId, on) {
+  if (on) {
+    await chrome.storage.session.set({ [OV(tabId)]: true });
+    await injectOverlay(tabId);
+  } else {
+    await chrome.storage.session.remove(OV(tabId));
+    await chrome.scripting.executeScript({ target: { tabId }, func: hideOverlay }).catch(() => {});
+  }
+}
+async function injectOverlay(tabId) {
+  const src = chrome.runtime.getURL(`popup/panel.html?overlay=1&tab=${tabId}`);
+  await chrome.scripting.executeScript({ target: { tabId }, func: showOverlay, args: [src, 'Flux Sniffer'] });
+}
+chrome.tabs.onUpdated.addListener(async (id, info) => {
+  if (info.status !== 'complete') return;
+  const o = await chrome.storage.session.get(OV(id));
+  if (o[OV(id)]) injectOverlay(id).catch(() => {});
+});
+
+chrome.runtime.onMessage.addListener((msg, sender, send) => {
   (async () => {
     switch (msg?.type) {
       case 'arm':
         await setArmed(msg.tabId, !!msg.on);
+        break;
+      case 'overlay':
+        await setOverlay(msg.tabId ?? sender.tab?.id, !!msg.on);
         break;
       case 'scan':
         await scanTab(msg.tabId);
@@ -352,5 +377,5 @@ chrome.tabs.onRemoved.addListener(async (id) => {
   await ready;
   armedTabs.delete(id);
   if (!armedTabs.size) detach();
-  chrome.storage.session.remove(KEY(id));
+  chrome.storage.session.remove([KEY(id), OV(id)]);
 });

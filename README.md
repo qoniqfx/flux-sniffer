@@ -50,7 +50,11 @@ S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic e
 
 ## Garder Flux Sniffer ouvert
 
-Le popup d'une extension se ferme dès qu'on clique sur la page (comportement de Chrome). Le bouton **Garder ouvert** dans le popup ouvre Flux Sniffer dans le panneau latéral du navigateur : il reste affiché, suit l'onglet actif et écoute automatiquement chaque page que tu ouvres. Si ton navigateur n'a pas de panneau latéral, une petite fenêtre flottante est ouverte à la place. Le bouton **Plein écran** ouvre Flux Sniffer dans un onglet entier ; il suit la dernière page web que tu as utilisée.
+Le popup d'une extension se ferme dès qu'on clique sur la page (comportement du navigateur). Le bouton **Garder ouvert** affiche donc Flux Sniffer dans une petite fenêtre flottante **directement dans la page** : elle reste au premier plan quoi que tu cliques, se déplace en la tirant par sa barre de titre, se réduit avec « – » et se ferme avec « × ». Elle revient toute seule si la page se recharge. Elle suit la page où tu l'as ouverte.
+
+Le bouton **Plein écran** ouvre Flux Sniffer dans un onglet entier ; il suit la dernière page web que tu as utilisée.
+
+Limite : un site qui interdit d'afficher des cadres externes (politique de sécurité très stricte) peut bloquer la fenêtre flottante ; utilise alors Plein écran.
 
 ## Mises à jour
 En bas du popup : `v0.2.0 · à jour` ou `version obsolète` avec un bandeau vers la dernière release.
@@ -99,7 +103,6 @@ Un flux qui échoue reste affiché avec la raison en clair (403, 404, page HTML,
 |---|---|
 | `webRequest` | lire les en-têtes de réponse des onglets écoutés |
 | `host_permissions: <all_urls>` | la radio peut être sur n'importe quel domaine, et le test doit pouvoir contacter le serveur du flux |
-| `sidePanel` | Afficher le panneau latéral. |
 | `scripting` | scanner la page à l'ouverture du popup |
 | `declarativeNetRequest` | rejouer Referer / Origin pendant le test |
 | `storage` | garder les flux trouvés de l'onglet (en mémoire de session, effacés à la fermeture du navigateur) et le résultat de la vérification de version |

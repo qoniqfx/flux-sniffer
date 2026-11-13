@@ -118,3 +118,5 @@ body[data-mode="panel"] { width: auto; min-width: 320px; min-height: 100vh; }
 #full { margin-left: auto; }
 #full + #pin { margin-left: 8px; }
 body.full { max-width: 760px; margin: 0 auto; }
+body.ov { width: auto; min-width: 0; }
+body.ov header .host { display: none; }
