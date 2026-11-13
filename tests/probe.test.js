@@ -2,7 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { probe } from '../extension/lib/probe.js';
-import { classifyResponse, normalizeKey } from '../extension/lib/classify.js';
+import { classifyResponse, normalizeKey, isSegment } from '../extension/lib/classify.js';
 import { copyValue } from '../extension/lib/format.js';
 
 // MPEG1 Layer III, 128 kbps, 44.1 kHz, joint stereo -> 417-byte frames
@@ -150,6 +150,26 @@ test('classifyResponse', () => {
   assert.equal(chunked.kind, 'stream');
   assert.equal(classifyResponse({ url: 'https://a.fr/api', status: 200, headers: { 'content-type': 'application/json' } }), null);
   assert.equal(classifyResponse({ url: 'https://a.fr/live', status: 302, headers: { 'content-type': 'audio/mpeg' } }), null);
+});
+
+test('HLS segments are never streams (M6 / Quortex style)', () => {
+  const u = 'https://hls.m6radio.quortex.io/radio/webradio/fun-one-world-radio/short/audio-64000/segment_311557914.ts';
+  assert.equal(classifyResponse({ url: u, status: 200, headers: { 'content-type': 'video/mp2t' } }), null);
+  assert.equal(classifyResponse({ url: u, status: 200, headers: { 'content-type': 'audio/mpeg' } }), null);
+  assert.equal(classifyResponse({ url: 'https://a.fr/x/chunk-00042.aac', status: 200, headers: { 'content-type': 'audio/aac' } }), null);
+  assert.equal(classifyResponse({ url: 'https://a.fr/live/stream.mp3', status: 200, headers: { 'content-type': 'audio/mpeg' } }).kind, 'stream');
+  assert.equal(isSegment('/a/b/seg_12.m4s'), true);
+  assert.equal(isSegment('/live/stream.mp3'), false);
+});
+
+test('variant playlist: master playlist is found one level up', async () => {
+  const r = await probe(`${base}/low/index.m3u8`);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.playlist, 'media');
+  assert.equal(r.masterUrl, `${base}/master.m3u8`);
+  const m = await probe(`${base}/master.m3u8`);
+  assert.equal(m.playlist, 'master');
+  assert.equal(m.masterUrl, '');
 });
 
 test('normalizeKey ignores cache busters only', () => {

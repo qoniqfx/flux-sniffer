@@ -52,7 +52,9 @@ function testState(it) {
   if (t.state === 'running') return Date.now() - t.at > STALE_RUNNING_MS ? 'run' : 'run';
   return t.state; // ok | ko
 }
-const rank = (it) => (testState(it) === 'ok' ? 0 : testState(it) === 'run' ? 1 : 2) * 10 + (KIND_ORDER[it.kind] ?? 5);
+const rank = (it) =>
+  (testState(it) === 'ok' ? 0 : testState(it) === 'run' ? 1 : 2) * 10 + (KIND_ORDER[it.kind] ?? 5) + (it.test?.playlist === 'media' ? 0.5 : 0);
+const kindName = (it) => (it.test?.playlist === 'media' ? 'HLS · variante' : KIND_NAME[it.label] || it.label);
 
 function explain(t = {}) {
   const e = t.error || '';
@@ -105,7 +107,7 @@ function heroCard(it) {
   })();
   const name = t.name || it.icy?.name || '';
   const real = realUrl(it);
-  const kind = KIND_NAME[it.label] || it.label;
+  const kind = kindName(it);
 
   const statusEl =
     st === 'ok'
@@ -166,7 +168,7 @@ function otherRow(it) {
     { class: 'item', type: 'button', onclick: () => ((selectedKey = it.key), render()) },
     h('span', { class: `dot ${st === 'run' ? '' : st}` }),
     h('span', { class: 't' }, name || host, h('small', {}, path || it.url)),
-    h('span', { class: 'k' }, KIND_NAME[it.label] || it.label),
+    h('span', { class: 'k' }, kindName(it)),
   );
 }
 

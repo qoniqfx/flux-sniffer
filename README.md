@@ -72,6 +72,8 @@ S'il y a plusieurs flux sur la page, les autres sont listés dessous : un clic e
 **1. Capture.** Pendant que l'écoute est active, l'extension observe les réponses réseau de l'onglet (pas leur contenu, seulement les en-têtes). Elle ne garde que ce qui ressemble à un flux : `Content-Type` audio, en-têtes `icy-*`, absence de `Content-Length`, ou URL en `.m3u8` / `.pls` / `.m3u` / `.mpd`. Si le player passe par une redirection (Zeno, Radio.co…), elle garde l'URL de départ, plus stable, et mémorise l'URL finale.
 En plus du réseau, elle scanne la page (balises `audio` / `video`, JSON, HTML) pour retrouver un flux déjà lancé avant l'ouverture du popup.
 
+**HLS (M6 Radio, Quortex, etc.)** : les segments `.ts` / `.m4s` changent toutes les quelques secondes, ils sont ignorés. Si le player n'a chargé que la playlist d'une qualité (`…/audio-64000/index.m3u8`), l'extension cherche la **playlist maître** un niveau au-dessus (`index.m3u8`, `master.m3u8`…) et te la propose en premier : c'est l'URL stable, avec toutes les qualités.
+
 **2. Classement.** Un flux direct avec en-têtes `icy-*` est étiqueté Icecast ou Shoutcast d'après l'en-tête `Server`. Les playlists HLS, DASH, PLS et M3U ont leur propre étiquette. Les fichiers audio avec `Content-Length` (podcasts, jingles) sont masqués par défaut, ainsi que les segments HLS.
 
 **3. Test.** Chaque candidat est vérifié automatiquement :

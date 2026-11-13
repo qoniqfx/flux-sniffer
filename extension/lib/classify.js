@@ -10,6 +10,12 @@ const PLS_CT = new Set([
   'audio/mpegurl',
   'audio/m3u',
 ]);
+// HLS/DASH media segments: never a stream by themselves (their URL changes every few seconds).
+const SEGMENT_EXT = /\.(ts|m4s|cmfa|cmfv|m4f|mts|fmp4)$/i;
+const SEGMENT_NAME = /(^|[\/_-])(seg(ment)?|chunk|frag(ment)?)[-_]?\d+|\d{5,}\.(aac|mp3|ts|m4s)$/i;
+export function isSegment(path, ct = '') {
+  return SEGMENT_EXT.test(path) || /mp2t/.test(ct) || SEGMENT_NAME.test(path);
+}
 const VOLATILE = /^(_|_t|ts|timestamp|cb|cachebust|nocache|rnd|rand|random)$/i;
 
 export function pickIcy(h) {
@@ -77,6 +83,7 @@ export function classifyResponse({ url, status, headers }) {
   });
 
   if (path.endsWith('.m3u8') || HLS_CT.has(ct)) return make('hls');
+  if (isSegment(path, ct)) return null;
   if (path.endsWith('.mpd') || ct === 'application/dash+xml') return make('dash');
   if (path.endsWith('.pls') || path.endsWith('.m3u') || PLS_CT.has(ct)) return make('playlist');
 

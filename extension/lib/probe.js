@@ -252,6 +252,36 @@ function codecName(codecs = '') {
   return a;
 }
 
+/** A media playlist usually has a parent master playlist one level up: find it so we can give the stable URL. */
+async function findMaster(f, mediaUrl) {
+  let u;
+  try {
+    u = new URL(mediaUrl);
+  } catch {
+    return '';
+  }
+  const dir = u.pathname.replace(/[^/]*$/, '');
+  if (dir.length <= 1) return '';
+  const parent = dir.replace(/[^/]+\/$/, '');
+  const names = ['index.m3u8', 'master.m3u8', 'playlist.m3u8', 'main.m3u8', 'manifest.m3u8'];
+  const found = await Promise.all(
+    names.map(async (n) => {
+      try {
+        const cand = new URL(parent + n, u.origin);
+        cand.search = u.search; // keep token-like query strings
+        const r = await fetchText(f, cand.href, 4000);
+        if (!r.ok || !r.text.includes('#EXT-X-STREAM-INF')) return '';
+        const refs = r.text.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith('#'));
+        const hit = refs.some((l) => new URL(l.trim(), r.url).pathname === u.pathname);
+        return hit ? cand.href : '';
+      } catch {
+        return '';
+      }
+    }),
+  );
+  return found.find(Boolean) || '';
+}
+
 async function probeHls(f, url) {
   const first = await fetchText(f, url);
   if (!first.ok) return fail(`HTTP ${first.status}`, { status: first.status });
@@ -259,6 +289,7 @@ async function probeHls(f, url) {
 
   let media = first;
   let variants = [];
+  const isMaster = first.text.includes('#EXT-X-STREAM-INF');
   const lines = first.text.split(/\r?\n/);
   if (first.text.includes('#EXT-X-STREAM-INF')) {
     for (let i = 0; i < lines.length; i++) {
@@ -296,6 +327,7 @@ async function probeHls(f, url) {
   const kbpsMax = bws.length ? Math.round(Math.max(...bws) / 1000) : 0;
   const codec = codecName(variants[0]?.codecs);
   const video = variants.some((v) => v.res || /avc|hev|hvc|vp0?9|av01/i.test(v.codecs));
+  const masterUrl = isMaster ? '' : await findMaster(f, first.url);
   const range = kbpsMin ? (kbpsMin === kbpsMax ? fmtKbps(kbpsMin) : `${kbpsMin}–${kbpsMax} kbps`) : '';
   return {
     ok: true,
@@ -308,7 +340,10 @@ async function probeHls(f, url) {
     video,
     encrypted,
     variants: variants.length,
+    playlist: isMaster ? 'master' : 'media',
+    masterUrl,
     parts: [
+      isMaster ? 'playlist maître' : 'variante',
       codec,
       range,
       variants.length > 1 ? `${variants.length} variantes` : '',

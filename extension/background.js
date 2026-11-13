@@ -103,7 +103,7 @@ async function addItem(tabId, c) {
       if (c.icy?.name && !it.icy?.name) it.icy = c.icy;
       return;
     }
-    if (c.kind === 'file' && s.hlsDirs.some((d) => c.entry.startsWith(d))) return; // HLS segment
+    if (c.kind !== 'hls' && s.hlsDirs.some((d) => c.entry.startsWith(d))) return; // HLS segment
     if (c.kind === 'hls') {
       const dir = c.entry.slice(0, c.entry.lastIndexOf('/') + 1);
       if (!s.hlsDirs.includes(dir)) s.hlsDirs = [...s.hlsDirs, dir].slice(-20);
@@ -204,10 +204,24 @@ async function runTest(tabId, key) {
         const path = new URL(cur.url).pathname;
         cur.label = labelFor(cur.kind, { server: res.server || cur.server, path, hasIcy: !!(res.name || res.metaint) });
       }
-    } else if (cur.source === 'page') {
-      s.items = s.items.filter((i) => i.key !== key); // page-scan false positive: drop silently
+    } else if (cur.source !== 'network') {
+      s.items = s.items.filter((i) => i.key !== key); // page-scan / derived false positive: drop silently
     }
   });
+  // The player only loaded a variant playlist: also offer the master (stable URL, all qualities).
+  if (res.ok && res.masterUrl) {
+    await addItem(tabId, {
+      entry: res.masterUrl,
+      finalUrl: '',
+      kind: 'hls',
+      label: 'HLS',
+      ctype: '',
+      server: '',
+      icy: {},
+      source: 'derived',
+      pageUrl: tab?.url || '',
+    });
+  }
 }
 
 // ───────────── page scan (finds streams already playing / referenced in the page) ─────────────
